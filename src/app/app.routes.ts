@@ -1,17 +1,41 @@
 import { Routes } from '@angular/router';
 import { HomePage } from './pages/public/home/home.page';
-import { AuthGuard } from './core/guards/auth.guard';
-import { RoleGuard } from './core/guards/role.guard';
+import { AuthGuard } from './guards/auth.guard';
+import { RoleGuard } from './guards/role.guard';
+import { PerfilUsuarioEnum } from './core/enums/perfil-usuario-enum';
+import { planoRoutes } from './pages/private/administrador/plano/plano.routes';
+import { BackofficeLayoutComponent } from './components/layout/backoffice/backoffice.component';
 
 export const routes: Routes = [
   { path: '', component: HomePage },
   { path: 'login', loadComponent: () => import('./pages/public/auth/login/login').then(m => m.Login) },
-  // {
-  //   path: 'dashboard',
-  //   loadComponent: () => import('./pages/dashboard/dashboard.page').then(m => m.DashboardPage),
-  //   canActivate: [AuthGuard, RoleGuard],
-  //   data: {
-  //     expectedRoles: ['admin', 'revendedor']
-  //   }
-  // }
+  {
+    path: 'administrador',
+    component: BackofficeLayoutComponent,
+    canActivate: [AuthGuard, RoleGuard],
+    data: { expectedRoles: [PerfilUsuarioEnum.ADMINISTRADOR] },
+    children: [
+      {
+        path: 'dashboard',
+        loadComponent: () => import('./pages/private/administrador/dashboard/dashboard').then(m => m.Dashboard)
+      },
+      {
+        path: 'planos',
+        children: planoRoutes
+      }
+      // Adicione aqui outras rotas do administrador, como clientes, representantes, etc.
+    ]
+  },
+  {
+    path: 'vendedor/dashboard',
+    loadComponent: () => import('./pages/private/vendedor/dashboard/dashboard').then(m => m.Dashboard),
+    canActivate: [AuthGuard, RoleGuard],
+    data: { expectedRoles: [PerfilUsuarioEnum.VENDEDOR] }
+  },
+  {
+    path: 'cliente/dashboard',
+    loadComponent: () => import('./pages/private/cliente/dashboard/dashboard').then(m => m.Dashboard),
+    canActivate: [AuthGuard, RoleGuard],
+    data: { expectedRoles: [PerfilUsuarioEnum.CLIENTE] }
+  }
 ];

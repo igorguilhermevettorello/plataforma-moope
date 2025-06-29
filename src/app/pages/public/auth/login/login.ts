@@ -7,9 +7,11 @@ import { Inject, PLATFORM_ID } from '@angular/core';
 import { RecaptchaModule, RecaptchaComponent } from 'ng-recaptcha-2';
 import { environment } from '../../../../../environments/environment';
 import { Auth } from '../../../../services/auth/auth';
-import { LoginRequest } from '../../../../services/auth/auth.model';
-import { ValidationError } from '../../../../services/auth/auth.model';
+import { LoginRequest } from '../../../../core/interfaces/auth.interface';
+import { ValidationError } from '../../../../core/interfaces/validation-error.interface';
 import { lowerFirst } from '../../../../shared/utils/string.utils';
+import { UsuarioLogado } from '../../../../core/interfaces/usuario-logado.model';
+import { PerfilUsuarioEnum } from '../../../../core/enums/perfil-usuario-enum';
 
 declare const grecaptcha: any;
 declare global {
@@ -31,6 +33,7 @@ export class Login implements OnInit {
   captchaToken: string | null = null;
   widgetId: number | null = null;
   recaptchaKey = environment.recaptchaKey;
+  loading = false;
 
   ngOnInit(): void {
   }
@@ -42,7 +45,6 @@ export class Login implements OnInit {
           
           window.recaptchaCallback = (token: string) => {
             this.captchaToken = token;
-            console.log('Token do reCAPTCHA:', token);
           };
           
           this.widgetId = grecaptcha.render(this.recaptchaContainer.nativeElement, {
@@ -92,15 +94,16 @@ export class Login implements OnInit {
   onSubmit(): void {
     this.loginRecaptcha = null;
     
-    // if (!this.captchaToken) {
-    //   this.loginRecaptcha = 'Por favor, complete o reCAPTCHA';
-    //   return;
-    // }
+    if (!this.captchaToken) {
+      this.loginRecaptcha = 'Por favor, complete o reCAPTCHA';
+      return;
+    }
     
     if (this.loginForm.invalid) {
       return;
     }
 
+    this.loading = true;
     const loginRequest: LoginRequest = {
       email: this.loginForm.value.email,
       senha: this.loginForm.value.senha,
@@ -110,15 +113,27 @@ export class Login implements OnInit {
     this.loginError = null;
     this.fieldErrors = {};
 
-    console.log('captchaToken', this.captchaToken);
-
     this.auth.login(loginRequest).subscribe({
       next: (result) => {
-        // Sucesso: result é LoginResponse
-        // this.router.navigate(['/dashboard']);
-        console.log(result);
+        debugger;
+        this.loading = false;
+        // Salva o usuário logado
+        this.auth.saveUsuarioLogado(result as UsuarioLogado);
+        // Redireciona para o dashboard correto conforme a role
+        const usuarioLogado = result as UsuarioLogado;
+        const userRole = usuarioLogado.data.user.perfil;
+        if (userRole === PerfilUsuarioEnum.ADMINISTRADOR) {
+          this.router.navigate(['/administrador/dashboard']);
+        } else if (userRole === PerfilUsuarioEnum.VENDEDOR) {
+          this.router.navigate(['/vendedor/dashboard']);
+        } else if (userRole === PerfilUsuarioEnum.CLIENTE) {
+          this.router.navigate(['/cliente/dashboard']);
+        } else {
+          this.router.navigate(['/']);
+        }
       },
       error: (errors: ValidationError[]) => {
+        this.loading = false;
         errors.forEach(err => {
           const field = lowerFirst(err.campo);
           const control = this.loginForm.get(field);

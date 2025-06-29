@@ -1,3 +1,5 @@
+import { ValidationError } from "./validation-error.interface";
+
 export interface LoginRequest {
   email: string;
   senha: string;
@@ -12,11 +14,6 @@ export interface LoginResponse {
     email: string;
     name: string;
   };
-}
-
-export interface ValidationError {
-  campo: string;
-  mensagem: string;
 }
 
 export type LoginResult = LoginResponse | ValidationError[];
